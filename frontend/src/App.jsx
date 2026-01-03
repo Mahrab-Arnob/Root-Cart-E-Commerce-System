@@ -12,10 +12,13 @@ import AddAddress from "./pages/AddAddress";
 import MyOrder from "./pages/MyOrder";
 import Checkout from "./pages/Checkout";
 import Navbar from "./components/Navbar";
-import { Toaster } from "react-hot-toast";
 import Footer from "./components/Footer";
 import { useContext } from "react";
 import { AppContext } from "./context/AppContext";
+
+// ✅ CHANGE: Import react-toastify components and CSS
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -25,12 +28,16 @@ import AllProducts from "./pages/admin/AllProducts";
 import Orders from "./pages/admin/Orders";
 import AddProduct from "./pages/admin/AddProduct";
 import AddCategory from "./pages/admin/AddCategory";
+
 const App = () => {
   const adminPath = useLocation().pathname.includes("admin");
   const { admin } = useContext(AppContext);
+
   return (
     <>
-      <Toaster />
+      {/* ✅ CHANGE: Replaced <Toaster /> with <ToastContainer /> */}
+      <ToastContainer position="top-right" autoClose={3000} />
+      
       <div className="w-full mx-auto px-4 sm:px-6 lg:px-24">
         {!adminPath && <Navbar />}
         <Routes>
@@ -46,7 +53,8 @@ const App = () => {
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/add-address" element={<AddAddress />} />
           <Route path="/my-orders" element={<MyOrder />} />
-          {/* admin Routes */}
+          
+          {/* Admin Routes */}
           <Route
             path="/admin"
             element={admin ? <AdminLayout /> : <AdminLogin />}
@@ -79,4 +87,5 @@ const App = () => {
     </>
   );
 };
+
 export default App;

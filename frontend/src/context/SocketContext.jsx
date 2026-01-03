@@ -1,12 +1,12 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import io from 'socket.io-client';
+import { createContext, useContext, useEffect, useState } from "react";
+import { io } from "socket.io-client";
 
 const SocketContext = createContext();
 
 export const useSocket = () => {
   const context = useContext(SocketContext);
   if (!context) {
-    throw new Error('useSocket must be used within SocketProvider');
+    throw new Error("useSocket must be used within SocketProvider");
   }
   return context;
 };
@@ -14,109 +14,103 @@ export const useSocket = () => {
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [dashboardStats, setDashboardStats] = useState(null);
-  const [recentActivity, setRecentActivity] = useState([]);
+  const [dashboardStats, setDashboardStats] = useState({
+    totalProducts: 0,
+    totalCustomers: 0,
+    totalOrders: 0,
+    totalRevenue: 0,
+    todayOrders: 0,
+    todayRevenue: 0,
+    pendingOrders: 0,
+    processingOrders: 0,
+  });
 
   useEffect(() => {
-    const socketUrl = 'http://localhost:4000';
-    const newSocket = io(socketUrl, {
-      transports: ['websocket', 'polling'],
+    // Initialize socket connection
+    const socketInstance = io("http://localhost:4000", {
+      withCredentials: true,
+      transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
     });
 
     // Connection events
-    newSocket.on('connect', () => {
-      console.log('✅ Connected to socket server');
+    socketInstance.on("connect", () => {
+      console.log("✅ Socket connected:", socketInstance.id);
       setIsConnected(true);
       
-      // Check for admin token (simplified logic)
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      if (token && token !== "null" && token !== "undefined") {
-        newSocket.emit('adminJoin');
-        console.log('👑 Joined admin dashboard room');
-      }
-      
-      // Request initial stats
-      newSocket.emit('getDashboardStats');
+      // Join admin dashboard if needed
+      socketInstance.emit("adminJoin");
     });
 
-    // Dashboard stats update
-    newSocket.on('dashboardStats', (stats) => {
-      console.log('📊 Received dashboard stats');
-      setDashboardStats(stats);
-    });
-
-    // New order notification
-    newSocket.on('newOrder', (data) => {
-      console.log('🆕 New order received:', data);
-      setDashboardStats(data.stats);
-      
-      // Add to recent activity
-      setRecentActivity(prev => [
-        {
-          type: 'newOrder',
-          message: `New order #${data.orderId} from ${data.customer}`,
-          amount: `৳${data.totalAmount}`,
-          time: new Date(),
-        },
-        ...prev.slice(0, 9) // Keep last 10 activities
-      ]);
-      
-      // Show browser notification if permission granted
-      if (Notification.permission === 'granted') {
-        new Notification('New Order!', {
-          body: `Order #${data.orderId} for ৳${data.totalAmount}`,
-          icon: '/favicon.ico'
-        });
+    socketInstance.on("dashboardStats", (data) => {
+      console.log("📊 Received dashboard stats:", data);
+      if (data && data.success) {
+        setDashboardStats(data.data);
+      } else if (data) {
+        // Handle direct data (without success wrapper)
+        setDashboardStats(data);
       }
     });
 
-    // Connection error
-    newSocket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error.message);
+    socketInstance.on("newOrderNotification", (notification) => {
+      console.log("🛒 New order notification:", notification);
+      // You can show a toast notification here
+      if (notification.stats) {
+        setDashboardStats(notification.stats);
+      }
+    });
+
+    socketInstance.on("disconnect", (reason) => {
+      console.log("❌ Socket disconnected:", reason);
       setIsConnected(false);
     });
 
-    // Disconnection
-    newSocket.on('disconnect', () => {
-      console.log('❌ Disconnected from socket server');
+    socketInstance.on("connect_error", (error) => {
+      console.error("🔌 Socket connection error:", error.message);
       setIsConnected(false);
     });
 
-    // Reconnection
-    newSocket.on('reconnect', (attemptNumber) => {
-      console.log(`♻️ Reconnected after ${attemptNumber} attempts`);
+    socketInstance.on("reconnect", (attemptNumber) => {
+      console.log("🔄 Socket reconnected on attempt:", attemptNumber);
       setIsConnected(true);
+      socketInstance.emit("adminJoin");
     });
 
-    setSocket(newSocket);
-
-    // Request notification permission
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission().then(permission => {
-        if (permission === 'granted') {
-          console.log('🔔 Notification permission granted');
-        }
-      });
-    }
+    setSocket(socketInstance);
 
     // Cleanup on unmount
     return () => {
-      if (newSocket) {
-        newSocket.disconnect();
+      if (socketInstance) {
+        socketInstance.disconnect();
+        console.log("🧹 Socket disconnected on cleanup");
       }
     };
   }, []);
+
+  // Function to manually join admin dashboard
+  const joinAdminDashboard = () => {
+    if (socket && isConnected) {
+      socket.emit("adminJoin");
+      console.log("👑 Emitted adminJoin");
+    }
+  };
+
+  // Function to manually request stats
+  const refreshStats = () => {
+    if (socket && isConnected) {
+      socket.emit("getDashboardStats");
+      console.log("🔄 Requested stats refresh");
+    }
+  };
 
   const value = {
     socket,
     isConnected,
     dashboardStats,
-    setDashboardStats,
-    recentActivity,
-    clearActivity: () => setRecentActivity([])
+    joinAdminDashboard,
+    refreshStats,
   };
 
   return (

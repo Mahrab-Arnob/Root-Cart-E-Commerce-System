@@ -4,10 +4,12 @@ import "swiper/css";
 import "swiper/css/autoplay";
 import { Autoplay } from "swiper/modules";
 import { useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import { AppContext } from "../context/AppContext";
 
 const Category = () => {
-  const { categoriesData, navigate } = useContext(AppContext);
+  const { categoriesData } = useContext(AppContext);
+  const navigate = useNavigate();
   
   // Color array for category backgrounds
   const colors = [
@@ -27,15 +29,33 @@ const Category = () => {
 
   // Get color safely with fallback to first color
   const getColor = (index) => {
-    return colors[index] || colors[0];
+    return colors[index % colors.length];
   };
 
   // Only enable loop if we have enough categories
-  const shouldLoop = categoriesData.length > 6;
+  const shouldLoop = categoriesData && categoriesData.length > 6;
 
   // Handle category click - navigate to shop with category filter
   const handleCategoryClick = (category) => {
     navigate(`/shop?category=${encodeURIComponent(category._id)}`);
+  };
+
+  // Helper function to get proper image URL
+  const getImageUrl = (imageUrl) => {
+    if (!imageUrl) return null;
+    
+    // If image URL already starts with http, return as is
+    if (imageUrl.startsWith('http')) {
+      return imageUrl;
+    }
+    
+    // If image starts with /uploads, use it with localhost
+    if (imageUrl.startsWith('/uploads')) {
+      return `http://localhost:4000${imageUrl}`;
+    }
+    
+    // Otherwise, add /uploads/ prefix
+    return `http://localhost:4000/uploads/${imageUrl}`;
   };
 
   // Don't render if no categories
@@ -67,7 +87,7 @@ const Category = () => {
       </h2>
 
       <Swiper
-        modules={{ Autoplay }}
+        modules={[Autoplay]}
         autoplay={{ 
           delay: 4000, 
           disableOnInteraction: false,
@@ -96,50 +116,54 @@ const Category = () => {
         }}
         className="w-full my-5"
       >
-        {categoriesData.map((category, index) => (
-          <SwiperSlide key={category._id || index}>
-            <motion.div
-              whileHover={{ 
-                rotate: 360,
-                scale: 1.05 
-              }}
-              transition={{ 
-                rotate: { duration: 0.3 },
-                scale: { duration: 0.2 }
-              }}
-              onClick={() => handleCategoryClick(category)}
-              className={`w-[130px] md:w-[150px] h-[170px] rounded-md ${getColor(index)} flex flex-col items-center justify-center cursor-pointer hover:shadow-lg transition-all duration-300 mx-auto group`}
-            >
-              <div className="w-28 h-28 rounded-full bg-white/70 flex items-center justify-center mb-2 group-hover:bg-white/90 transition-all">
-                {category.image ? (
-                  <img
-                    src={`http://localhost:4000/uploads/${category.image}`}
-                    alt={category.name}
-                    className="w-full h-full object-cover rounded-full"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.parentElement.innerHTML = `
-                        <div class="w-full h-full rounded-full flex items-center justify-center">
-                          <span class="text-3xl font-bold text-gray-700">${category.name.charAt(0)}</span>
-                        </div>
-                      `;
-                    }}
-                  />
-                ) : (
-                  <span className="text-3xl font-bold text-gray-700">
-                    {category.name.charAt(0)}
-                  </span>
-                )}
-              </div>
-              <h3 className="text-lg font-semibold text-gray-800 mt-1 text-center px-1 line-clamp-1">
-                {category.name}
-              </h3>
-              <p className="text-xs text-gray-600 mt-0.5">
-                {category.productCount || 0} products
-              </p>
-            </motion.div>
-          </SwiperSlide>
-        ))}
+        {categoriesData.map((category, index) => {
+          const imageUrl = getImageUrl(category.image);
+          
+          return (
+            <SwiperSlide key={category._id || index}>
+              <motion.div
+                whileHover={{ 
+                  rotate: 360,
+                  scale: 1.05 
+                }}
+                transition={{ 
+                  rotate: { duration: 0.3 },
+                  scale: { duration: 0.2 }
+                }}
+                onClick={() => handleCategoryClick(category)}
+                className={`w-[130px] md:w-[150px] h-[170px] rounded-md ${getColor(index)} flex flex-col items-center justify-center cursor-pointer hover:shadow-lg transition-all duration-300 mx-auto group`}
+              >
+                <div className="w-28 h-28 rounded-full bg-white/70 flex items-center justify-center mb-2 group-hover:bg-white/90 transition-all overflow-hidden">
+                  {imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      alt={category.name}
+                      className="w-full h-full object-cover rounded-full"
+                      onError={(e) => {
+                        console.error('Failed to load image:', imageUrl);
+                        e.target.style.display = 'none';
+                        const fallback = document.createElement('span');
+                        fallback.className = 'text-3xl font-bold text-gray-700';
+                        fallback.textContent = category.name.charAt(0);
+                        e.target.parentElement.appendChild(fallback);
+                      }}
+                    />
+                  ) : (
+                    <span className="text-3xl font-bold text-gray-700">
+                      {category.name.charAt(0)}
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800 mt-1 text-center px-1 line-clamp-1">
+                  {category.name}
+                </h3>
+                <p className="text-xs text-gray-600 mt-0.5">
+                  {category.productCount || 0} products
+                </p>
+              </motion.div>
+            </SwiperSlide>
+          );
+        })}
       </Swiper>
     </div>
   );

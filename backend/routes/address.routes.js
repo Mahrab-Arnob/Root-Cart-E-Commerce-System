@@ -1,7 +1,20 @@
 import express from "express";
-import { isAuth } from "../middlewares/auth.js";
-import { addAddress, getUserAddresses } from "../controllers/address.controller.js";
-const addressRouter = express.Router();
-addressRouter.post("/add", isAuth, addAddress);
-addressRouter.get("/get", isAuth, getUserAddresses);
-export default addressRouter;
+import { isAuthDev } from "../middlewares/auth.js"; // ✅ Fixed Import Path
+import { 
+  addAddress, 
+  getUserAddresses, 
+  deleteAddress 
+} from "../controllers/address.controller.js";
+
+const router = express.Router();
+
+// Apply middleware to all routes in this file
+router.use(isAuthDev);
+
+// Routes
+router.post("/add", addAddress);
+router.get("/all", getUserAddresses);
+// Added delete route if you need it
+router.delete("/delete/:id", deleteAddress);
+
+export default router;

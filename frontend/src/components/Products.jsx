@@ -1,6 +1,8 @@
+// Products.jsx - Add image URL helper function
 import { useContext } from "react";
 import { AppContext } from "../context/AppContext";
 import ProductCard from "./ProductCard";
+
 const Products = () => {
   const { productsData, navigate } = useContext(AppContext);
   
@@ -24,6 +26,11 @@ const Products = () => {
     );
   }
 
+  // Filter out any invalid products
+  const validProducts = productsData.filter(product => 
+    product && product._id && product.name
+  );
+
   return (
     <div className="py-12">
       <div className="flex items-center">
@@ -37,11 +44,21 @@ const Products = () => {
       </h2>
 
       <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 items-center justify-center gap-4">
-        {productsData.map((product) => (
-          <ProductCard key={product?._id || Math.random()} product={product} />
+        {validProducts.map((product) => (
+          <ProductCard 
+            key={product._id} 
+            product={product} 
+          />
         ))}
       </div>
+      
+      {validProducts.length === 0 && (
+        <div className="mt-8 text-center">
+          <p className="text-gray-500">No valid products to display</p>
+        </div>
+      )}
     </div>
   );
 };
+
 export default Products;

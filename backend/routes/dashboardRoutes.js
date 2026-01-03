@@ -1,11 +1,11 @@
 import express from "express";
 import { getDashboardStats } from "../utils/dashboardStats.js";
-import { isAuthenticated, authorizeRoles } from "../middleware/auth.js";
+import { isAuthDev, authorizeRoles } from "../middlewares/auth.js";
 
 const router = express.Router();
 
 // Dashboard stats route (admin only)
-router.get("/stats", isAuthenticated, authorizeRoles("admin"), async (req, res) => {
+router.get("/stats", isAuthDev, authorizeRoles("admin"), async (req, res) => {
   try {
     const stats = await getDashboardStats();
     res.json({

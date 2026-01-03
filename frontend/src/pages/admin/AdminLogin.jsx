@@ -6,8 +6,8 @@ import { AppContext } from "../../context/AppContext.jsx";
 const AdminLogin = () => {
   const { navigate, handleAdminLogin, axios } = useContext(AppContext);
   const [formData, setFormData] = useState({ 
-    email: "", 
-    password: "",
+    email: "admin@example.com", 
+    password: "admin123",
     rememberMe: false 
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -35,7 +35,7 @@ const AdminLogin = () => {
         
         // Store the token if it exists in response
         if (data.token) {
-          handleAdminLogin(data.token, formData.rememberMe);
+          await handleAdminLogin(data.token, formData.rememberMe);
         }
         
         // Redirect to admin dashboard

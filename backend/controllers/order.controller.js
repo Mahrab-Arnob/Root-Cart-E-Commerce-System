@@ -1,21 +1,20 @@
 import Order from "../models/order.model.js";
-import { io, getDashboardStats } from "../index.js"; // Import from your main file
 
 export const placeOrder = async (req, res) => {
   try {
     const { id } = req.user;
     const { items, address, totalAmount, paymentMethod } = req.body;
 
+    // Standard Express way to get global variables without Circular Imports
+    const io = req.app.get("io");
+    const getDashboardStats = req.app.get("getDashboardStats");
+
     if (!address) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Address is required" });
+      return res.status(400).json({ success: false, message: "Address is required" });
     }
 
     if (!items || items.length === 0) {
-      return res
-        .status(400)
-        .json({ success: false, message: "No items in order" });
+      return res.status(400).json({ success: false, message: "No items in order" });
     }
 
     const formattedItems = items.map((item) => ({
@@ -34,11 +33,10 @@ export const placeOrder = async (req, res) => {
     });
 
     // 🔥 REAL-TIME: Emit new order event
-    if (io) {
+    if (io && getDashboardStats) {
       try {
         const stats = await getDashboardStats();
         
-        // Emit to admin dashboard
         io.to("admin-dashboard").emit("newOrder", {
           orderId: order._id,
           orderNumber: `ORD-${Date.now()}`,
@@ -50,21 +48,14 @@ export const placeOrder = async (req, res) => {
           stats: stats,
         });
         
-        // Also send updated dashboard stats
-        io.to("admin-dashboard").emit("dashboardStats", stats);
-        
+        io.to("admin-dashboard").emit("dashboardStats", { success: true, data: stats });
         console.log(`📦 Socket: New order ${order._id} emitted`);
       } catch (socketError) {
         console.error("Socket emit error:", socketError);
-        // Don't fail the order if socket fails
       }
     }
 
-    res.status(201).json({
-      success: true,
-      message: "Order placed successfully",
-      order,
-    });
+    res.status(201).json({ success: true, message: "Order placed successfully", order });
   } catch (error) {
     console.error("Order error:", error.message);
     res.status(500).json({ success: false, message: error.message });
@@ -104,18 +95,13 @@ export const updateOrderStatus = async (req, res) => {
     const { orderId } = req.params;
     const { status } = req.body;
     
-    const validStatuses = [
-      "Pending",
-      "Processing",
-      "Shipped",
-      "Delivered",
-      "Cancelled",
-    ];
+    const io = req.app.get("io");
+    const getDashboardStats = req.app.get("getDashboardStats");
+
+    const validStatuses = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
     
     if (!validStatuses.includes(status)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid status" });
+      return res.status(400).json({ success: false, message: "Invalid status" });
     }
     
     const order = await Order.findByIdAndUpdate(
@@ -125,17 +111,13 @@ export const updateOrderStatus = async (req, res) => {
     ).populate("user", "name email");
 
     if (!order) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Order not found" });
+      return res.status(404).json({ success: false, message: "Order not found" });
     }
 
-    // 🔥 REAL-TIME: Emit order status update
-    if (io) {
+    if (io && getDashboardStats) {
       try {
         const stats = await getDashboardStats();
         
-        // Emit to admin dashboard
         io.to("admin-dashboard").emit("orderStatusUpdated", {
           orderId: order._id,
           orderNumber: `ORD-${order._id.toString().slice(-6)}`,
@@ -145,10 +127,8 @@ export const updateOrderStatus = async (req, res) => {
           timestamp: new Date(),
         });
         
-        // Emit updated dashboard stats
-        io.to("admin-dashboard").emit("dashboardStats", stats);
+        io.to("admin-dashboard").emit("dashboardStats", { success: true, data: stats });
         
-        // Emit to user's room if they're connected
         if (order.user) {
           io.to(`user-${order.user._id}`).emit("orderUpdate", {
             orderId: order._id,
@@ -156,33 +136,23 @@ export const updateOrderStatus = async (req, res) => {
             message: `Your order status has been updated to: ${status}`,
           });
         }
-        
-        console.log(`🔄 Socket: Order ${orderId} status updated to ${status}`);
       } catch (socketError) {
         console.error("Socket emit error:", socketError);
       }
     }
 
-    res.json({
-      success: true,
-      message: "Order status updated",
-      order,
-    });
+    res.json({ success: true, message: "Order status updated", order });
   } catch (error) {
-    console.error("Update order error:", error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 export const getOrderStats = async (req, res) => {
   try {
+    const getDashboardStats = req.app.get("getDashboardStats");
     const stats = await getDashboardStats();
-    res.json({
-      success: true,
-      data: stats,
-    });
+    res.json({ success: true, data: stats });
   } catch (error) {
-    console.error("Get order stats error:", error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };

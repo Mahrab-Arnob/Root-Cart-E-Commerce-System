@@ -17,12 +17,18 @@ const productSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
     },
-    image: String,
+    // ✅ FIX: Changed to Array to support multiple images
+    images: {
+      type: [String],
+      required: true,
+      default: []
+    },
     stock: {
       type: Number,
       default: 0,
       min: 0,
     },
+    weight: String, // Added weight as it was used in frontend
     isActive: {
       type: Boolean,
       default: true,

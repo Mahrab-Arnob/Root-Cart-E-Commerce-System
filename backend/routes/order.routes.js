@@ -6,17 +6,17 @@ import {
   updateOrderStatus,
   getOrderStats,
 } from "../controllers/order.controller.js";
-import { isAuthenticated, authorizeRoles } from "../middleware/auth.js";
+import { isAuthDev, authorizeRoles } from "../middlewares/auth.js";
 
 const router = express.Router();
 
-router.post("/place", isAuthenticated, placeOrder);
-router.get("/my-orders", isAuthenticated, getUserOrders);
-router.get("/all", isAuthenticated, authorizeRoles("admin"), getAllOrders);
-router.get("/stats", isAuthenticated, authorizeRoles("admin"), getOrderStats);
+router.post("/place", isAuthDev, placeOrder);
+router.get("/my-orders", isAuthDev, getUserOrders);
+router.get("/all", isAuthDev, authorizeRoles("admin"), getAllOrders);
+router.get("/stats", isAuthDev, authorizeRoles("admin"), getOrderStats);
 router.put(
   "/:orderId/status",
-  isAuthenticated,
+  isAuthDev,
   authorizeRoles("admin"),
   updateOrderStatus
 );

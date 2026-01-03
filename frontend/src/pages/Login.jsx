@@ -34,11 +34,7 @@ const Login = () => {
       if (data.success) {
         // Store the token if it exists in response
         if (data.token) {
-          handleLogin(data.token, formData.rememberMe);
-        } else {
-          // If backend doesn't return token in response, try to get it from cookies
-          // or assume authentication is handled via cookies with withCredentials
-          console.log("No token in response, assuming cookie-based auth");
+          await handleLogin(data.token, formData.rememberMe);
         }
         
         toast.success(data.message || "Login successful!");

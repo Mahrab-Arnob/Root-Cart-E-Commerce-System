@@ -4,56 +4,69 @@ import { ShoppingCart } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const ProductCard = ({ product }) => {
-  // Add early return if product is null
-  if (!product) {
-    return null; // Or return a placeholder/skeleton if you prefer
-  }
+  if (!product) return null;
 
-  const { navigate, currency, addToCart } = useContext(AppContext);
-  
-  // Use optional chaining and default values
-  const productId = product?._id || "";
-  const productImages = product?.images || [];
-  const productCategory = product?.category || {};
-  const productName = product?.name || "Product Name";
-  const productWeight = product?.weight || "";
-  const productPrice = product?.price || 0;
-  const productOfferPrice = product?.offerPrice || 0;
+  const { currency, addToCart } = useContext(AppContext);
+
+  // Safe Image URL Getter
+  const getImageUrl = (product) => {
+    // 1. Fallback if no images
+    if (!product.images || !Array.isArray(product.images) || product.images.length === 0) {
+      return "https://placehold.co/400x400?text=No+Image";
+    }
+
+    const imgName = product.images[0];
+    
+    // 2. Fallback if filename is invalid
+    if (!imgName) return "https://placehold.co/400x400?text=No+Image";
+
+    // 3. Return correct URL
+    if (imgName.startsWith('http')) return imgName;
+    return `http://localhost:4000/uploads/${imgName}`;
+  };
 
   return (
-    <div className="w-[250px] h-[350px] rounded-xl bg-[#FAFAFA] p-[20px] hover:border hover:border-secondary hover:transform hover:scale-105 transition-all ease-in-out duration-300">
-      <p>{productWeight}</p>
-      <Link to={`/product/${productId}`} className="cursor-pointer">
-        <img
-          src={`http://localhost:4000/uploads/${productImages[0] || ''}`}
-          alt={productName}
-          className="w-full h-48 object-cover"
-        />
+    <div className="w-full max-w-[250px] bg-white border rounded-xl shadow-sm hover:shadow-md transition-all duration-300 p-4 flex flex-col justify-between">
+      <Link to={`/product/${product._id}`} className="group block">
+        <div className="relative w-full h-44 bg-gray-50 rounded-lg overflow-hidden flex items-center justify-center">
+          <img
+            src={getImageUrl(product)}
+            alt={product.name}
+            className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300 mix-blend-multiply"
+            onError={(e) => { e.target.src = "https://placehold.co/400x400?text=Error"; }}
+          />
+        </div>
+
+        <div className="mt-3">
+          <p className="text-xs text-gray-500 uppercase font-medium">
+            {product.category?.name || "Uncategorized"}
+          </p>
+          <h3 className="text-gray-900 font-semibold truncate mt-1" title={product.name}>
+            {product.name}
+          </h3>
+          
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-lg font-bold text-gray-900">
+              {currency}{product.offerPrice > 0 ? product.offerPrice : product.price}
+            </span>
+            {product.offerPrice > 0 && (
+              <span className="text-xs text-gray-400 line-through">
+                {currency}{product.price}
+              </span>
+            )}
+          </div>
+        </div>
       </Link>
+
       <button
         onClick={() => addToCart(product)}
-        className="flex items-center justify-center mb-3 w-full py-1 bg-secondary text-white cursor-pointer"
+        className="mt-3 w-full py-2 bg-secondary text-white rounded-lg flex items-center justify-center gap-2 hover:bg-green-700 transition active:scale-95"
       >
-        <ShoppingCart />
+        <ShoppingCart size={16} />
+        Add to Cart
       </button>
-      <hr className="w-full" />
-      <div>
-        <p className="text-secondary text-sm font-normal">
-          {productCategory?.name || "Category"}
-        </p>
-        <h2 className="text-lg font-semibold text-gray-800">{productName}</h2>
-      </div>
-      <div className="flex items-center gap-4">
-        <p className="text-base font-normal line-through text-gray-400">
-          {currency}
-          {productPrice}
-        </p>
-        <p className="text-base font-normal ">
-          {currency}
-          {productOfferPrice}
-        </p>
-      </div>
     </div>
   );
 };
+
 export default ProductCard;

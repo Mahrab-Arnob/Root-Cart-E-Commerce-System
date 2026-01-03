@@ -163,17 +163,16 @@ const AddProduct = () => {
       formPayload.append("weight", formData.weight);
       formPayload.append("category", formData.category);
       
+      // Append images carefully
       formData.images.forEach((file) => {
         if (file) {
           formPayload.append("images", file);
         }
       });
 
-      const { data } = await axios.post("/api/product/add", formPayload, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      // ✅ FIX: Removed manual 'Content-Type' header. 
+      // Axios automatically sets the correct boundary for FormData.
+      const { data } = await axios.post("/api/product/add", formPayload);
       
       if (data.success) {
         toast.success(data.message);
@@ -182,6 +181,7 @@ const AddProduct = () => {
         toast.error(data.message);
       }
     } catch (error) {
+      console.error("Add Product Error:", error); // Helpful for debugging
       toast.error(error.response?.data?.message || "Error adding product");
     } finally {
       setLoading(false);
